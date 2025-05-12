@@ -376,7 +376,8 @@ def handle_disconnect():
 
 # We also need to update the register.html template to include the role field
 # This is handled in the new register.html file
+port = int(os.getenv('PORT', 5000))
 
+# And at the bottom, change:
 if __name__ == '__main__':
-    # Don't create tables here as we've migrated the database separately
-    socketio.run(app, allow_unsafe_werkzeug=True, debug=True)
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)
