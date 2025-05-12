@@ -384,7 +384,15 @@ def handle_disconnect():
 
 # We also need to update the register.html template to include the role field
 # This is handled in the new register.html file
-port = int(os.getenv('PORT', 5000))
+port = int(os.getenv('PORT', 5000)) 
+
+@app.route('/profile')
+@login_required
+def profile():
+    # Get user details
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+    return render_template('profile.html', user=user)
 
 # And at the bottom, change:
 if __name__ == '__main__':
