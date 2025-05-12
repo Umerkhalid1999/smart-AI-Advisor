@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Choose Your Advisor - Academic Chat Interface</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-size: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-title {
+            flex-grow: 1;
+        }
+        .profile-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            transition: background 0.3s;
+        }
+        .profile-btn:hover {
+            background: #2980b9;
+        }
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .content {
+            padding: 20px;
+        }
+        .welcome-message {
+            text-align: center;
+            padding: 10px;
+            background-color: #e3f2fd;
+            margin: 10px 0 20px;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .advisor-options {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .advisor-card {
+            flex: 1 1 300px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .advisor-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .advisor-header {
+            background: #2c3e50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-size: 18px;
+        }
+        .advisor-ai .advisor-header {
+            background: #3498db;
+        }
+        .advisor-content {
+            padding: 15px;
+            text-align: center;
+        }
+        .advisor-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 10px auto;
+            display: block;
+        }
+        .advisor-description {
+            margin: 15px 0;
+            font-size: 14px;
+            color: #555;
+        }
+        .chat-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+            transition: background 0.3s;
+        }
+        .chat-btn:hover {
+            background: #1a252f;
+        }
+        .advisor-ai .chat-btn {
+            background: #3498db;
+        }
+        .advisor-ai .chat-btn:hover {
+            background: #2980b9;
+        }
+        .human-advisors-section {
+            margin-top: 30px;
+        }
+        .section-title {
+            font-size: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #2c3e50;
+        }
+        .human-advisor-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .human-advisor-card {
+            flex: 1 1 calc(50% - 15px);
+            min-width: 250px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .human-advisor-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+        .human-advisor-content {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+        }
+        .human-advisor-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        .human-advisor-info {
+            flex-grow: 1;
+        }
+        .human-advisor-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .human-advisor-status {
+            font-size: 12px;
+            color: #27ae60;
+        }
+        .alert {
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        @media (max-width: 600px) {
+            .human-advisor-card {
+                flex: 1 1 100%;
+            }
+            .advisor-card {
+                flex: 1 1 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-title">Academic Advisor Selection</div>
+            <div>
+                <a href="{{ url_for('profile') }}"><button class="profile-btn">Profile</button></a>
+                <a href="{{ url_for('logout') }}"><button class="logout-btn">Logout</button></a>
+            </div>
+        </div>
+
+        <div class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="welcome-message">
+                Welcome, {{ username }}! Choose an advisor to help with your academic questions.
+            </div>
+
+            <div class="advisor-options">
+                <div class="advisor-card advisor-ai">
+                    <div class="advisor-header">
+                        AI Academic Advisor
+                    </div>
+                    <div class="advisor-content">
+                        <img src="{{ url_for('static', filename='Profes.jpg') }}" alt="AI Advisor" class="advisor-image" onerror="this.src='https://via.placeholder.com/100?text=AI+Advisor'">
+                        <div class="advisor-description">
+                            Get instant responses to your academic questions from our AI advisor, available 24/7.
+                        </div>
+                        <a href="{{ url_for('chat') }}" class="chat-btn">Chat with AI Advisor</a>
+                    </div>
+                </div>
+            </div>
+
+            {% if advisors %}
+                <div class="human-advisors-section">
+                    <h2 class="section-title">Human Advisors</h2>
+                    <div class="human-advisor-list">
+                        {% for advisor in advisors %}
+                            <div class="human-advisor-card">
+                                <div class="human-advisor-content">
+                                    <img src="{{ url_for('static', filename=advisor.profile_pic) if advisor.profile_pic.startswith('uploads/') else 'https://via.placeholder.com/60?text=A' }}"
+                                         alt="{{ advisor.username }}"
+                                         class="human-advisor-image"
+                                         onerror="this.src='https://via.placeholder.com/60?text={{ advisor.username[0] }}';">
+                                    <div class="human-advisor-info">
+                                        <div class="human-advisor-name">{{ advisor.username }}</div>
+                                        <div class="human-advisor-status">Online • Real Advisor</div>
+                                    </div>
+                                    <a href="{{ url_for('human_chat', advisor_id=advisor.id) }}" class="chat-btn">Chat</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="human-advisors-section">
+                    <h2 class="section-title">Human Advisors</h2>
+                    <p>No human advisors are currently available. Please check back later or register as an advisor.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
