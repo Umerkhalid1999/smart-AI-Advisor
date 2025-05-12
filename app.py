@@ -15,10 +15,11 @@ db = SQLAlchemy(app)
 socketio = SocketIO(app)  # Initialize SocketIO for real-time chat
 
 # Initialize OpenAI client with your API key
+custom_http_client = httpx.Client(proxies=None)
 client = OpenAI(
-    api_key="SECRET_KEY", http_client=httpx.Client(proxies=None))
-
-
+    api_key="SECRET_KEY",
+    http_client=custom_http_client
+)
 # User model - extended with role
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
