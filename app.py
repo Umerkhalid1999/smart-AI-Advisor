@@ -9,8 +9,10 @@ import httpx
 
 from dotenv import load_dotenv
 load_dotenv()
+template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
+app = Flask(__name__, template_folder=template_dir, instance_relative_config=True)
+app = Flask(__name__, instance_relative_config=True) 
 
-app = Flask(__name__, instance_relative_config=True)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.secret_key = os.urandom(24)  # For session management
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
