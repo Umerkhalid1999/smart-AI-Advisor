@@ -14,9 +14,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 socketio = SocketIO(app)  # Initialize SocketIO for real-time chat
 
-# Initialize OpenAI client with your API key
 client = OpenAI(
-    api_key="SECRET_KEY")
+    api_key=os.getenv("OPENAI_API_KEY"))
 # User model - extended with role
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
