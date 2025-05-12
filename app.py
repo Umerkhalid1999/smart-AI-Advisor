@@ -380,4 +380,4 @@ def handle_disconnect():
 
 if __name__ == '__main__':
     # Don't create tables here as we've migrated the database separately
-    socketio.run(app, debug=True)
+    socketio.run(app, allow_unsafe_werkzeug=False, debug=True)
