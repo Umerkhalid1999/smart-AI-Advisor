@@ -7,6 +7,9 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO, emit, join_room, leave_room 
 import httpx
 
+from dotenv import load_dotenv
+load_dotenv()
+
 app = Flask(__name__, instance_relative_config=True)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.secret_key = os.urandom(24)  # For session management
