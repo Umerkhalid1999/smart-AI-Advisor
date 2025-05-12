@@ -15,7 +15,7 @@ socketio = SocketIO(app)  # Initialize SocketIO for real-time chat
 
 # Initialize OpenAI client with your API key
 client = OpenAI(
-    api_key="SECRET_KEY", proxies=None)
+    api_key="SECRET_KEY")
 
 
 # User model - extended with role
