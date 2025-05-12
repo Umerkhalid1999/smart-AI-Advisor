@@ -1,80 +1,77 @@
-🎓 Smart AI Advisor - Academic Guidance Platform
-Overview
+# **🎓 Smart AI Advisor - Academic Guidance Platform***
+## Overview
 Smart AI Advisor is a modern web application designed to bridge the gap between students and academic advisors. Leveraging the power of artificial intelligence alongside human expertise, it provides students with instant access to academic guidance, while offering advisors an efficient platform to manage student inquiries.
 Built with Flask and OpenAI's GPT technology, this platform enables real-time communication and personalized support for academic questions, course selection, career guidance, and more.
-Show Image
-Show Image
-Show Image
-Show Image
-✨ Key Features
-Dual Advisor System
+
+## ✨ Key Features
+1. Dual Advisor System
 
 AI-Powered Assistant: Instant responses to common academic questions and guidance
 Human Advisor Network: Connect with real academic advisors for complex issues and personalized support
 Seamless Integration: Switch between AI and human support as needed
 
-Advanced Communication
+2. Advanced Communication
 
 Real-time Chat: Instant messaging powered by Socket.IO technology
 Notification System: Stay updated with unread message alerts
 Conversation History: Access complete chat logs for reference
 
-Smart User Experience
+3. Smart User Experience
 
 Role-Based Interface: Tailored experiences for students and advisors
 Secure Authentication: Robust login and registration system
 Responsive Design: Optimized for both desktop and mobile use
 
-Administrative Features
+4. Administrative Features
 
 Advisor Dashboard: Comprehensive overview of student inquiries
 User Management: Easily manage student and advisor accounts
 Analytics: Track usage patterns and common questions
 
-🛠️ Technology Stack
-Backend Framework
+## 🛠️ Technology Stack
+1. Backend Framework
 
 Flask: Lightweight and flexible Python web framework
 Gunicorn/Eventlet: Production-grade WSGI server configuration
 Flask-SocketIO: Real-time bidirectional event-based communication
 
-Database & ORM
+2. Database & ORM
 
-SQLAlchemy: Powerful ORM for database operations
-SQLite: Local development database
-PostgreSQL: Production database option
+- SQLAlchemy: Powerful ORM for database operations
+- SQLite: Local development database
+- PostgreSQL: Production database option
 
-AI & Natural Language Processing
+3. AI & Natural Language Processing
 
-OpenAI GPT-3.5: Advanced natural language understanding and generation
-Custom AI System Prompts: Tailored for academic advising context
+- OpenAI GPT-3.5: Advanced natural language understanding and generation
+- Custom AI System Prompts: Tailored for academic advising context
 
-Security
+4. Security
 
-Werkzeug: Password hashing and security utilities
-Session Management: Secure user sessions
-Environment Variable Protection: Sensitive credential management
+- Werkzeug: Password hashing and security utilities
+- Session Management: Secure user sessions
+- Environment Variable Protection: Sensitive credential management
 
-📋 Installation & Setup
-Prerequisites
+## 📋 Installation & Setup
+1. Prerequisites
 
-Python 3.12 or higher
-pip package manager
-OpenAI API key
+- Python 3.12 or higher
+- pip package manager
+- OpenAI API key
 
-Local Development Setup
+2. Local Development Setup
 
-Clone the repository
+- Clone the repository
 
 bashgit clone https://github.com/Umerkhalid1999/smart-AI-Advisor.git
 cd smart-AI-Advisor
 
-Create and activate a virtual environment
+3. Create and activate a virtual environment
 
 bashpython -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-Install dependencies
+3. Install dependencies
 
 bashpip install -r requirements.txt
 
@@ -91,8 +88,9 @@ bashpython -c "from app import app, db; app.app_context().push(); db.create_all(
 Run the application
 
 bashpython app.py
-The application will be available at http://localhost:5000
-🚀 Deployment
+The application will be available at http://localhost:5000 
+
+## 🚀 Deployment
 This application is optimized for deployment on Railway:
 
 Prepare your repository
