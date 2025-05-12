@@ -5,5 +5,5 @@ openai>=1.0.0
 python-dotenv==1.0.0
 werkzeug==3.0.1
 gunicorn==21.2.0
-eventlet==0.33.3
+eventlet>=0.33.3
 httpx==0.24.1
