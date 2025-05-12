@@ -45,7 +45,10 @@ class ChatMessage(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_messages')
 
-
+# Create database tables
+with app.app_context():
+    db.create_all() 
+    
 # Login required decorator
 def login_required(func):
     def wrapper(*args, **kwargs):
