@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Choose Your Advisor - EduConnect{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <!-- Welcome Section -->
+            <div class="card mb-4">
+                <div class="card-header text-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user-friends me-2"></i>Choose Your Academic Advisor
+                    </h4>
+                </div>
+                <div class="card-body text-center">
+                    <h5 class="gradient-text mb-3">Welcome, {{ username }}!</h5>
+                    <p class="mb-0">Select an advisor to help with your academic questions and guidance.</p>
+                </div>
+            </div>
+
+            <!-- AI Advisor Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h5 class="mb-3">
+                        <i class="fas fa-robot me-2"></i>AI-Powered Academic Assistant
+                    </h5>
+                </div>
+                <div class="col-md-6 mx-auto">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <div class="mb-3">
+                                <i class="fas fa-robot fa-4x text-primary"></i>
+                            </div>
+                            <h5 class="card-title">AI Academic Advisor</h5>
+                            <p class="card-text text-muted">
+                                Get instant answers to your academic questions with our AI-powered assistant.
+                                Available 24/7 for immediate support.
+                            </p>
+                            <div class="row text-center mb-3">
+                                <div class="col-4">
+                                    <i class="fas fa-clock text-success"></i>
+                                    <p class="small mb-0">Instant</p>
+                                </div>
+                                <div class="col-4">
+                                    <i class="fas fa-brain text-info"></i>
+                                    <p class="small mb-0">Smart</p>
+                                </div>
+                                <div class="col-4">
+                                    <i class="fas fa-infinity text-warning"></i>
+                                    <p class="small mb-0">24/7</p>
+                                </div>
+                            </div>
+                            <a href="{{ url_for('chat') }}" class="btn btn-primary">
+                                <i class="fas fa-comments me-2"></i>Start AI Chat
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Human Advisors Section -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h5 class="mb-3">
+                        <i class="fas fa-users me-2"></i>Human Academic Advisors
+                    </h5>
+                </div>
+                {% if advisors %}
+                    {% for advisor in advisors %}
+                    <div class="col-lg-6 mb-3">
+                        <div class="card h-100">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-auto">
+                                        <div class="position-relative">
+                                            <img src="{{ url_for('uploaded_file', filename=advisor.profile_image) if advisor.profile_image != 'default-avatar.png' else url_for('static', filename='default-avatar.svg') }}" 
+                                                 alt="{{ advisor.full_name or advisor.username }}" 
+                                                 class="avatar-large status-online"
+                                                 onerror="this.src='{{ url_for('static', filename='default-avatar.svg') }}'">
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <h6 class="mb-1">
+                                            {% if advisor.title %}{{ advisor.title }} {% endif %}
+                                            {{ advisor.full_name or advisor.username }}
+                                        </h6>
+                                        <p class="text-muted small mb-1">
+                                            <i class="fas fa-chalkboard-teacher me-1"></i>Academic Advisor
+                                        </p>
+                                        {% if advisor.specialization %}
+                                        <p class="text-muted small mb-1">
+                                            <i class="fas fa-book me-1"></i>{{ advisor.specialization }}
+                                        </p>
+                                        {% endif %}
+                                        {% if advisor.office_location %}
+                                        <p class="text-muted small mb-1">
+                                            <i class="fas fa-map-marker-alt me-1"></i>{{ advisor.office_location }}
+                                        </p>
+                                        {% endif %}
+                                        {% if advisor.office_hours %}
+                                        <p class="text-muted small mb-2">
+                                            <i class="fas fa-clock me-1"></i>{{ advisor.office_hours }}
+                                        </p>
+                                        {% endif %}
+                                        <div class="d-flex gap-2">
+                                            <a href="{{ url_for('human_chat', advisor_id=advisor.id) }}" 
+                                               class="btn btn-success btn-sm">
+                                                <i class="fas fa-comments me-1"></i>Chat
+                                            </a>
+                                            <a href="{{ url_for('view_profile', user_id=advisor.id) }}" 
+                                               class="btn btn-outline-primary btn-sm">
+                                                <i class="fas fa-eye me-1"></i>View Profile
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                                <h6 class="text-muted">No Human Advisors Available</h6>
+                                <p class="text-muted mb-0">
+                                    Currently, no human advisors are available. 
+                                    Please try our AI advisor or check back later.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Tips Section -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card glass-effect">
+                        <div class="card-body">
+                            <h6 class="mb-3">
+                                <i class="fas fa-lightbulb me-2"></i>Quick Tips
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-robot text-primary me-2"></i>
+                                    <small>Use AI for quick questions and immediate responses</small>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-user text-success me-2"></i>
+                                    <small>Contact human advisors for complex academic planning</small>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <i class="fas fa-clock text-info me-2"></i>
+                                    <small>Check advisor office hours before starting a chat</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
