@@ -1,0 +1,415 @@
+{% extends "base.html" %}
+
+{% block title %}Chat with {{ student.full_name or student.username }} - EduConnect{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 200px);
+        min-height: 600px;
+    }
+    
+    .chat-messages {
+        height: 400px;
+        overflow-y: auto;
+        padding: 20px;
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--border-color);
+        scroll-behavior: smooth;
+    }
+    
+    .message {
+        margin-bottom: 16px;
+        animation: fadeInUp 0.3s ease;
+        display: flex;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .message-bubble {
+        max-width: 80%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        position: relative;
+        word-wrap: break-word;
+    }
+    
+    .message.sent {
+        justify-content: flex-end;
+    }
+    
+    .message.sent .message-bubble {
+        background: linear-gradient(135deg, var(--secondary-color), #059669);
+        color: white;
+        text-align: right;
+    }
+    
+    .message.received .message-bubble {
+        background: white;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow);
+    }
+    
+    .message-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: var(--shadow);
+        flex-shrink: 0;
+    }
+    
+    .message-time {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        margin-top: 4px;
+    }
+    
+    .input-section {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .input-group {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+    
+    .message-input {
+        flex: 1;
+        border: 2px solid var(--border-color);
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.9);
+        resize: vertical;
+        min-height: 50px;
+        max-height: 150px;
+    }
+    
+    .message-input:focus {
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 0.2rem rgba(16, 185, 129, 0.25);
+        background: white;
+    }
+    
+    .send-btn {
+        padding: 12px 24px;
+        background: linear-gradient(135deg, var(--secondary-color), #059669);
+        border: none;
+        border-radius: 12px;
+        color: white;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        min-width: 80px;
+    }
+    
+    .send-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .send-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .student-info {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow);
+    }
+    
+    .student-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin: 0 auto 12px;
+        border: 4px solid white;
+        box-shadow: var(--shadow-lg);
+        position: relative;
+    }
+    
+    .online-indicator {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        width: 16px;
+        height: 16px;
+        background: var(--primary-color);
+        border: 3px solid white;
+        border-radius: 50%;
+    }
+    
+    .welcome-section {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(79, 70, 229, 0.1));
+        border-radius: 16px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 24px;
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+    
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Welcome Section -->
+            <div class="welcome-section">
+                <h4 class="gradient-text mb-2">
+                    <i class="fas fa-chalkboard-teacher me-2"></i>Advisor Session
+                </h4>
+                <p class="mb-0">Providing academic guidance to {{ student.full_name or student.username }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row chat-container">
+        <!-- Student Info Panel -->
+        <div class="col-lg-3 mb-4">
+            <div class="student-info">
+                <div class="position-relative d-inline-block">
+                    <img src="{{ url_for('uploaded_file', filename=student.profile_image) if student.profile_image != 'default-avatar.png' else url_for('static', filename='default-avatar.svg') }}" 
+                         alt="{{ student.full_name or student.username }}" 
+                         class="student-avatar"
+                         onerror="this.src='{{ url_for('static', filename='default-avatar.svg') }}'">
+                    <div class="online-indicator"></div>
+                </div>
+                <h6 class="mb-1">{{ student.full_name or student.username }}</h6>
+                <p class="text-muted small mb-2">Student</p>
+                <span class="badge bg-primary small">
+                    <i class="fas fa-circle me-1" style="font-size: 8px;"></i>Active
+                </span>
+                
+                {% if student.student_id or student.department or student.year_of_study %}
+                <hr>
+                <div class="text-start">
+                    {% if student.student_id %}
+                    <p class="small mb-1"><i class="fas fa-id-card me-2"></i>{{ student.student_id }}</p>
+                    {% endif %}
+                    {% if student.department %}
+                    <p class="small mb-1"><i class="fas fa-building me-2"></i>{{ student.department }}</p>
+                    {% endif %}
+                    {% if student.year_of_study %}
+                    <p class="small mb-0"><i class="fas fa-calendar-alt me-2"></i>{{ student.year_of_study }}</p>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <hr>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('view_profile', user_id=student.id) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-user me-1"></i>View Profile
+                    </a>
+                    <a href="{{ url_for('advisor_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat Area -->
+        <div class="col-lg-9">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-comments me-2"></i>Academic Support Session with {{ student.full_name or student.username }}
+                    </h6>
+                </div>
+                <div class="card-body d-flex flex-column p-0">
+                    <!-- Messages Area -->
+                    <div class="chat-messages" id="chatMessages">
+                        <!-- Load existing messages -->
+                        {% for message in messages %}
+                            <div class="message {% if message.sender_id == session.user_id %}sent{% else %}received{% endif %}">
+                                {% if message.sender_id != session.user_id %}
+                                    <img src="{{ url_for('uploaded_file', filename=student.profile_image) if student.profile_image != 'default-avatar.png' else url_for('static', filename='default-avatar.svg') }}" 
+                                         alt="{{ student.full_name or student.username }}" 
+                                         class="message-avatar"
+                                         onerror="this.src='{{ url_for('static', filename='default-avatar.svg') }}'">
+                                {% endif %}
+                                <div class="message-bubble">
+                                    <div>{{ message.content }}</div>
+                                    <div class="message-time">{{ message.timestamp.strftime('%H:%M') }}</div>
+                                </div>
+                                {% if message.sender_id == session.user_id %}
+                                    <img src="{{ url_for('uploaded_file', filename=session.user_image) if session.user_image and session.user_image != 'default-avatar.png' else url_for('static', filename='default-avatar.svg') }}" 
+                                         alt="{{ session.username }}" 
+                                         class="message-avatar"
+                                         onerror="this.src='{{ url_for('static', filename='default-avatar.svg') }}'">
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Input Area -->
+                    <div class="input-section">
+                        <div class="input-group">
+                            <textarea class="form-control message-input" 
+                                    id="messageInput" 
+                                    placeholder="Provide academic guidance and support..."
+                                    rows="1"></textarea>
+                            <button class="btn send-btn" id="sendBtn" onclick="sendMessage()">
+                                <i class="fas fa-paper-plane me-1"></i>Send
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-2">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>Press Enter to send, Shift+Enter for new line
+                            </small>
+                            <small class="text-success">
+                                <i class="fas fa-user-shield me-1"></i>Professional guidance
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const socket = io();
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const chatMessages = document.getElementById('chatMessages');
+    
+    // Auto-resize textarea
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+    });
+    
+    // Send message on Enter (but not Shift+Enter)
+    messageInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
+        }
+    });
+    
+    // Socket.IO event handlers
+    socket.on('connect', function() {
+        console.log('Connected to server');
+    });
+    
+    socket.on('new_message', function(data) {
+        if (data.sender_id == {{ student.id }} && data.receiver_id == {{ session.user_id }}) {
+            addMessage(data.content, data.sender_name, false, data.timestamp);
+        }
+    });
+    
+    // Auto-scroll to bottom
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Initial scroll
+    scrollToBottom();
+});
+
+function sendMessage() {
+    const messageInput = document.getElementById('messageInput');
+    const message = messageInput.value.trim();
+    
+    if (!message) return;
+    
+    const sendBtn = document.getElementById('sendBtn');
+    
+    // Disable send button
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Sending...';
+    
+    // Add message to UI immediately
+    addMessage(message, '{{ session.username }}', true, 'now');
+    
+    // Clear input
+    messageInput.value = '';
+    messageInput.style.height = 'auto';
+    
+    // Send to backend
+    fetch('/send_human_message', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            message: message,
+            receiver_id: {{ student.id }}
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('Message sent successfully');
+        }
+        
+        // Re-enable send button
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Send';
+        
+        // Focus back to input
+        messageInput.focus();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        
+        // Re-enable send button
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane me-1"></i>Send';
+    });
+}
+
+function addMessage(content, senderName, isSent, timestamp) {
+    const chatMessages = document.getElementById('chatMessages');
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${isSent ? 'sent' : 'received'}`;
+    
+    const avatarSrc = isSent ? 
+        '{{ url_for("uploaded_file", filename=session.user_image) if session.user_image and session.user_image != "default-avatar.png" else url_for("static", filename="default-avatar.svg") }}' : 
+        '{{ url_for("uploaded_file", filename=student.profile_image) if student.profile_image != "default-avatar.png" else url_for("static", filename="default-avatar.svg") }}';
+    
+    const timeStr = timestamp === 'now' ? new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : timestamp;
+    
+    messageDiv.innerHTML = `
+        ${!isSent ? `<img src="${avatarSrc}" alt="${senderName}" class="message-avatar" onerror="this.src='{{ url_for('static', filename='default-avatar.svg') }}'">` : ''}
+        <div class="message-bubble">
+            <div>${content.replace(/\n/g, '<br>')}</div>
+            <div class="message-time">${timeStr}</div>
+        </div>
+        ${isSent ? `<img src="${avatarSrc}" alt="${senderName}" class="message-avatar" onerror="this.src='{{ url_for('static', filename='default-avatar.svg') }}'">` : ''}
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    setTimeout(() => {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }, 100);
+}
+</script>
+{% endblock %}
