@@ -1,33 +1,66 @@
-from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash, send_from_directory
 import os
 from openai import OpenAI
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 from flask_sqlalchemy import SQLAlchemy
-from flask_socketio import SocketIO, emit, join_room, leave_room 
-import httpx
+from flask_socketio import SocketIO, emit, join_room, leave_room
+import uuid
 
-from dotenv import load_dotenv
-load_dotenv()
-template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), 'templates'))
-app = Flask(__name__, template_folder=template_dir, instance_relative_config=True)
-app = Flask(__name__, instance_relative_config=True) 
-
+app = Flask(__name__, instance_relative_config=True)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 app.secret_key = os.urandom(24)  # For session management
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# File upload configuration
+app.config['UPLOAD_FOLDER'] = 'static/uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# Create upload directory if it doesn't exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
 db = SQLAlchemy(app)
 socketio = SocketIO(app)  # Initialize SocketIO for real-time chat
 
+# Initialize OpenAI client with your API key
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"))
-# User model - extended with role
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+# User model - extended with role, profile image, and biodata
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(200), nullable=False)
     role = db.Column(db.String(20), default='student')  # 'student' or 'advisor'
+    
+    # Profile information
+    profile_image = db.Column(db.String(255), default='default-avatar.png')
+    full_name = db.Column(db.String(150))
+    phone = db.Column(db.String(20))
+    date_of_birth = db.Column(db.Date)
+    bio = db.Column(db.Text)
+    
+    # Student-specific fields
+    student_id = db.Column(db.String(50))
+    department = db.Column(db.String(100))
+    year_of_study = db.Column(db.String(20))
+    
+    # Advisor-specific fields
+    title = db.Column(db.String(100))  # Dr., Prof., etc.
+    specialization = db.Column(db.String(200))
+    office_location = db.Column(db.String(100))
+    office_hours = db.Column(db.String(200))
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __repr__(self):
         return f'<User {self.username}>'
@@ -45,10 +78,7 @@ class ChatMessage(db.Model):
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_messages')
     receiver = db.relationship('User', foreign_keys=[receiver_id], backref='received_messages')
 
-# Create database tables
-with app.app_context():
-    db.create_all() 
-    
+
 # Login required decorator
 def login_required(func):
     def wrapper(*args, **kwargs):
@@ -144,6 +174,7 @@ def login():
             session['user_id'] = user.id
             session['username'] = user.username
             session['role'] = user.role
+            session['user_image'] = user.profile_image
             flash('Login successful!', 'success')
 
             if user.role == 'advisor':
@@ -160,6 +191,7 @@ def logout():
     session.pop('user_id', None)
     session.pop('username', None)
     session.pop('role', None)
+    session.pop('user_image', None)
     flash('You have been logged out', 'info')
     return redirect(url_for('login'))
 
@@ -382,18 +414,89 @@ def handle_disconnect():
         print(f"User {session.get('username')} disconnected")
 
 
-# We also need to update the register.html template to include the role field
-# This is handled in the new register.html file
-port = int(os.getenv('PORT', 5000)) 
-
+# Profile management routes
 @app.route('/profile')
 @login_required
 def profile():
-    # Get user details
-    user_id = session.get('user_id')
-    user = User.query.get(user_id)
+    user = User.query.get(session['user_id'])
     return render_template('profile.html', user=user)
 
-# And at the bottom, change:
+
+@app.route('/edit_profile')
+@login_required
+def edit_profile():
+    user = User.query.get(session['user_id'])
+    return render_template('edit_profile.html', user=user)
+
+
+@app.route('/update_profile', methods=['POST'])
+@login_required
+def update_profile():
+    user = User.query.get(session['user_id'])
+    
+    # Handle profile image upload
+    if 'profile_image' in request.files:
+        file = request.files['profile_image']
+        if file and file.filename != '' and allowed_file(file.filename):
+            # Generate unique filename
+            filename = str(uuid.uuid4()) + '.' + file.filename.rsplit('.', 1)[1].lower()
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            file.save(filepath)
+            user.profile_image = filename
+    
+    # Update basic profile information
+    user.full_name = request.form.get('full_name', user.full_name)
+    user.phone = request.form.get('phone', user.phone)
+    user.bio = request.form.get('bio', user.bio)
+    
+    # Convert date_of_birth string to date object
+    dob_str = request.form.get('date_of_birth')
+    if dob_str:
+        try:
+            user.date_of_birth = datetime.strptime(dob_str, '%Y-%m-%d').date()
+        except ValueError:
+            pass  # Keep existing date if format is invalid
+    
+    # Update role-specific fields
+    if user.role == 'student':
+        user.student_id = request.form.get('student_id', user.student_id)
+        user.department = request.form.get('department', user.department)
+        user.year_of_study = request.form.get('year_of_study', user.year_of_study)
+    elif user.role == 'advisor':
+        user.title = request.form.get('title', user.title)
+        user.specialization = request.form.get('specialization', user.specialization)
+        user.office_location = request.form.get('office_location', user.office_location)
+        user.office_hours = request.form.get('office_hours', user.office_hours)
+    
+    user.updated_at = datetime.utcnow()
+    
+    try:
+        db.session.commit()
+        # Update session with new profile image if it was changed
+        session['user_image'] = user.profile_image
+        flash('Profile updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating profile: {str(e)}', 'danger')
+    
+    return redirect(url_for('profile'))
+
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+
+@app.route('/view_profile/<int:user_id>')
+@login_required
+def view_profile(user_id):
+    user = User.query.get_or_404(user_id)
+    return render_template('view_profile.html', user=user)
+
+
+# We also need to update the register.html template to include the role field
+# This is handled in the new register.html file
+
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=port, debug=False)
+    # Don't create tables here as we've migrated the database separately
+    socketio.run(app, allow_unsafe_werkzeug=True, debug=True)
