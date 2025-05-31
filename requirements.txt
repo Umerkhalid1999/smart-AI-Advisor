@@ -8,7 +8,7 @@ Werkzeug==3.0.1
 
 # Production server
 gunicorn==21.2.0
-eventlet==0.33.3
+eventlet>=0.33.3
 
 # HTTP Client
 httpx==0.28.1
