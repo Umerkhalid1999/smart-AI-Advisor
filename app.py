@@ -494,6 +494,39 @@ def view_profile(user_id):
     return render_template('view_profile.html', user=user)
 
 
+@app.route('/delete_account', methods=['POST'])
+@login_required
+def delete_account():
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+    
+    if not user:
+        flash('User not found', 'danger')
+        return redirect(url_for('profile'))
+    
+    try:
+        # Delete all chat messages where user is sender or receiver
+        ChatMessage.query.filter(
+            (ChatMessage.sender_id == user_id) | 
+            (ChatMessage.receiver_id == user_id)
+        ).delete()
+        
+        # Delete the user account
+        db.session.delete(user)
+        db.session.commit()
+        
+        # Clear session
+        session.clear()
+        
+        flash('Your account has been successfully deleted', 'success')
+        return redirect(url_for('login'))
+        
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting account: {str(e)}', 'danger')
+        return redirect(url_for('profile'))
+
+
 # We also need to update the register.html template to include the role field
 # This is handled in the new register.html file
 
