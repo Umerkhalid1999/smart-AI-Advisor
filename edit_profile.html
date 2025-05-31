@@ -194,6 +194,9 @@
 
                         <!-- Action Buttons -->
                         <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-outline-danger me-auto" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                                <i class="fas fa-trash-alt me-2"></i>Delete Account
+                            </button>
                             <a href="{{ url_for('profile') }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-times me-2"></i>Cancel
                             </a>
@@ -203,6 +206,47 @@
                         </div>
                     </form>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Confirmation Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteAccountModalLabel">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Confirm Account Deletion
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger" role="alert">
+                    <strong>Are you absolutely sure?</strong>
+                </div>
+                <p>This action <strong>cannot be undone</strong>. This will permanently delete your account and remove all your data from our servers.</p>
+                
+                <div class="bg-light p-3 rounded">
+                    <h6 class="mb-2">This will delete:</h6>
+                    <ul class="mb-0">
+                        <li>Your profile: <strong>{{ user.full_name or user.username }}</strong></li>
+                        <li>Your role: <strong>{{ user.role.title() }}</strong></li>
+                        <li>All your chat messages</li>
+                        <li>All account data</li>
+                    </ul>
+                </div>
+                
+                <p class="mt-3 mb-0">Please type <strong>DELETE</strong> to confirm:</p>
+                <input type="text" class="form-control mt-2" id="confirmationText" placeholder="Type DELETE to confirm">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="POST" action="{{ url_for('delete_account') }}" class="d-inline">
+                    <button type="submit" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                        <i class="fas fa-trash-alt me-2"></i>Delete My Account
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -221,7 +265,7 @@
         }
     }
     
-    // Form validation
+    // Form validation and delete account confirmation
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.querySelector('form');
         
@@ -246,6 +290,24 @@
                 }
             }
         });
+        
+        // Delete account confirmation functionality
+        const confirmationInput = document.getElementById('confirmationText');
+        const deleteButton = document.getElementById('confirmDeleteBtn');
+        
+        if (confirmationInput && deleteButton) {
+            confirmationInput.addEventListener('input', function() {
+                if (this.value === 'DELETE') {
+                    deleteButton.disabled = false;
+                    deleteButton.classList.remove('btn-danger');
+                    deleteButton.classList.add('btn-outline-danger');
+                } else {
+                    deleteButton.disabled = true;
+                    deleteButton.classList.remove('btn-outline-danger');
+                    deleteButton.classList.add('btn-danger');
+                }
+            });
+        }
     });
 </script>
 {% endblock %} 
