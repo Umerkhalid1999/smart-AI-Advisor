@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}Message Logs - Database Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-header {
+        background: linear-gradient(135deg, #fdcb6e 0%, #e17055 100%);
+        color: white;
+        padding: 30px 0;
+        margin: -20px -15px 30px -15px;
+        border-radius: 0 0 20px 20px;
+    }
+    
+    .data-table {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .table thead th {
+        background: #f8f9fc;
+        color: #2d3436;
+        font-weight: 600;
+        border: none;
+        padding: 15px 12px;
+        font-size: 0.9rem;
+    }
+    
+    .table tbody td {
+        padding: 12px;
+        border: none;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+    }
+    
+    .table tbody tr:hover {
+        background: #f8f9fc;
+    }
+    
+    .message-content {
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .message-full {
+        background: #f8f9fc;
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+    
+    .user-badge {
+        padding: 4px 8px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: white;
+    }
+    
+    .user-student { background: #fd79a8; }
+    .user-advisor { background: #00b894; }
+    .user-admin { background: #6c5ce7; }
+    
+    .stats-bar {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+    }
+    
+    .icon-large {
+        font-size: 2rem;
+        margin-right: 15px;
+        opacity: 0.8;
+    }
+    
+    .message-row {
+        cursor: pointer;
+    }
+    
+    .message-expanded {
+        background: #fff3cd !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-header text-center">
+    <div class="container">
+        <h1><i class="fas fa-comments icon-large"></i>Message Logs</h1>
+        <p class="lead">Monitor all communications between users</p>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Statistics Bar -->
+    <div class="stats-bar">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-0">
+                    <i class="fas fa-comments text-warning"></i> 
+                    Total Messages: <strong>{{ messages.total }}</strong>
+                </h5>
+            </div>
+            <div class="col-md-6 text-right">
+                <a href="{{ url_for('admin_export_data', data_type='messages') }}" class="btn btn-success mr-2">
+                    <i class="fas fa-file-csv"></i> Export Messages
+                </a>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Messages Table -->
+    <div class="data-table">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Message Content</th>
+                    <th>Timestamp</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for message in messages.items %}
+                <tr class="message-row" onclick="toggleMessage({{ message.id }})">
+                    <td><strong>{{ message.id }}</strong></td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ url_for('uploaded_file', filename=message.sender.profile_image) if message.sender.profile_image != 'default-avatar.png' else url_for('static', filename='images/default-avatar.png') }}" 
+                                 alt="Profile" class="rounded-circle mr-2" style="width: 25px; height: 25px;">
+                            <div>
+                                <strong>{{ message.sender.username }}</strong>
+                                <br>
+                                <span class="user-badge user-{{ message.sender.role }}">
+                                    {{ message.sender.role.title() }}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ url_for('uploaded_file', filename=message.receiver.profile_image) if message.receiver.profile_image != 'default-avatar.png' else url_for('static', filename='images/default-avatar.png') }}" 
+                                 alt="Profile" class="rounded-circle mr-2" style="width: 25px; height: 25px;">
+                            <div>
+                                <strong>{{ message.receiver.username }}</strong>
+                                <br>
+                                <span class="user-badge user-{{ message.receiver.role }}">
+                                    {{ message.receiver.role.title() }}
+                                </span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="message-content">
+                            {{ message.content[:80] }}{% if message.content|length > 80 %}...{% endif %}
+                        </div>
+                        <div id="message-full-{{ message.id }}" class="message-full" style="display: none;">
+                            {{ message.content }}
+                        </div>
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            {{ message.timestamp.strftime('%Y-%m-%d') }}<br>
+                            {{ message.timestamp.strftime('%H:%M:%S') }}
+                        </small>
+                    </td>
+                    <td>
+                        {% if message.read %}
+                        <span class="badge badge-success">
+                            <i class="fas fa-check"></i> Read
+                        </span>
+                        {% else %}
+                        <span class="badge badge-warning">
+                            <i class="fas fa-envelope"></i> Unread
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); toggleMessage({{ message.id }})">
+                            <i class="fas fa-eye"></i> <span id="toggle-text-{{ message.id }}">View</span>
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not messages.items %}
+                <tr>
+                    <td colspan="7" class="text-center py-4">
+                        <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No messages found</h5>
+                        <p class="text-muted">No communications have occurred yet</p>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if messages.pages > 1 %}
+    <nav aria-label="Messages pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if messages.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_messages', page=messages.prev_num) }}">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in messages.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != messages.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_messages', page=page_num) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if messages.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_messages', page=messages.next_num) }}">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<script>
+function toggleMessage(messageId) {
+    const fullMessage = document.getElementById('message-full-' + messageId);
+    const toggleText = document.getElementById('toggle-text-' + messageId);
+    const row = fullMessage.closest('tr');
+    
+    if (fullMessage.style.display === 'none') {
+        fullMessage.style.display = 'block';
+        toggleText.textContent = 'Hide';
+        row.classList.add('message-expanded');
+    } else {
+        fullMessage.style.display = 'none';
+        toggleText.textContent = 'View';
+        row.classList.remove('message-expanded');
+    }
+}
+</script>
+{% endblock %} 
