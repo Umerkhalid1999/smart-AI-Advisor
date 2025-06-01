@@ -24,7 +24,6 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 db = SQLAlchemy(app)
 socketio = SocketIO(app)  # Initialize SocketIO for real-time chat
 
-Initialize OpenAI client with your API key
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"))
 
