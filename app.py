@@ -24,8 +24,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 db = SQLAlchemy(app)
 socketio = SocketIO(app)  # Initialize SocketIO for real-time chat
 
-client = OpenAI(
-    api_key=os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -518,15 +517,15 @@ def view_profile(user_id):
 @admin_required
 def admin_dashboard():
     """Main admin dashboard with overview statistics"""
-    # Get statistics
-    total_users = User.query.count()
+    # Get statistics (exclude admin users from counts and displays)
+    total_users = User.query.filter(User.role != 'admin').count()
     total_students = User.query.filter_by(role='student').count()
     total_advisors = User.query.filter_by(role='advisor').count()
     total_admins = User.query.filter_by(role='admin').count()
     total_messages = ChatMessage.query.count()
     
-    # Get recent activities
-    recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+    # Get recent activities (exclude admin users from recent users)
+    recent_users = User.query.filter(User.role != 'admin').order_by(User.created_at.desc()).limit(5).all()
     recent_messages = ChatMessage.query.order_by(ChatMessage.timestamp.desc()).limit(5).all()
     
     return render_template('admin_dashboard.html',
@@ -539,18 +538,18 @@ def admin_dashboard():
                          recent_messages=recent_messages)
 
 
-# Admin User Management - View All Users
+# Admin User Management - View All Users (Students and Advisors only)
 @app.route('/admin/users')
 @admin_required
 def admin_users():
-    """View all users in table format"""
+    """View all users in table format (students and advisors only)"""
     page = request.args.get('page', 1, type=int)
     role_filter = request.args.get('role', 'all')
     search_query = request.args.get('search', '')
     per_page = 15
     
-    # Build query
-    query = User.query
+    # Build query - exclude admin users
+    query = User.query.filter(User.role != 'admin')
     
     if role_filter != 'all':
         query = query.filter_by(role=role_filter)
@@ -676,7 +675,7 @@ def admin_delete_user(user_id):
 @app.route('/admin/export/<data_type>')
 @admin_required
 def admin_export_data(data_type):
-    """Export data to CSV for presentations"""
+    """Export data to CSV for presentations (students and advisors only)"""
     import csv
     import io
     from flask import Response
@@ -715,13 +714,16 @@ def admin_export_data(data_type):
         writer = csv.writer(output)
         writer.writerow(['ID', 'Sender', 'Receiver', 'Content', 'Timestamp', 'Read'])
         
-        messages = ChatMessage.query.all()
+        # Only export messages between students and advisors (exclude admin messages)
+        messages = ChatMessage.query.join(User, ChatMessage.sender_id == User.id).filter(User.role != 'admin').all()
         for message in messages:
-            writer.writerow([
-                message.id, message.sender.username, message.receiver.username,
-                message.content[:200] + '...' if len(message.content) > 200 else message.content,
-                message.timestamp.strftime('%Y-%m-%d %H:%M:%S'), message.read
-            ])
+            # Double check receiver is not admin
+            if message.receiver.role != 'admin':
+                writer.writerow([
+                    message.id, message.sender.username, message.receiver.username,
+                    message.content[:200] + '...' if len(message.content) > 200 else message.content,
+                    message.timestamp.strftime('%Y-%m-%d %H:%M:%S'), message.read
+                ])
         
         filename = 'messages_export.csv'
     
