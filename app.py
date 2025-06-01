@@ -24,7 +24,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 db = SQLAlchemy(app)
 socketio = SocketIO(app)  # Initialize SocketIO for real-time chat
 
-# Initialize OpenAI client with your API key
+Initialize OpenAI client with your API key
 client = OpenAI(
     api_key=os.getenv("OPENAI_API_KEY"))
 
@@ -107,12 +107,30 @@ def advisor_required(func):
     return wrapper
 
 
+# Database Admin role required decorator
+def admin_required(func):
+    def wrapper(*args, **kwargs):
+        if 'user_id' not in session:
+            flash('Please login to access this page', 'warning')
+            return redirect(url_for('login'))
+        user = User.query.get(session['user_id'])
+        if not user or user.role != 'admin':
+            flash('This area is restricted to database administrators', 'danger')
+            return redirect(url_for('home'))
+        return func(*args, **kwargs)
+
+    wrapper.__name__ = func.__name__
+    return wrapper
+
+
 @app.route('/')
 def home():
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user and user.role == 'advisor':
             return redirect(url_for('advisor_dashboard'))
+        elif user and user.role == 'admin':
+            return redirect(url_for('admin_dashboard'))
         return redirect(url_for('chat_selection'))
     return redirect(url_for('login'))
 
@@ -131,7 +149,7 @@ def register():
             return render_template('register.html')
 
         # Validate role
-        if role not in ['student', 'advisor']:
+        if role not in ['student', 'advisor', 'admin']:
             role = 'student'  # Default to student for safety
 
         # Check if username or email already exists
@@ -179,6 +197,8 @@ def login():
 
             if user.role == 'advisor':
                 return redirect(url_for('advisor_dashboard'))
+            elif user.role == 'admin':
+                return redirect(url_for('admin_dashboard'))
             return redirect(url_for('chat_selection'))
         else:
             flash('Invalid username or password', 'danger')
@@ -494,41 +514,228 @@ def view_profile(user_id):
     return render_template('view_profile.html', user=user)
 
 
-@app.route('/delete_account', methods=['POST'])
-@login_required
-def delete_account():
-    user_id = session.get('user_id')
-    user = User.query.get(user_id)
+# Admin Dashboard Route
+@app.route('/admin_dashboard')
+@admin_required
+def admin_dashboard():
+    """Main admin dashboard with overview statistics"""
+    # Get statistics
+    total_users = User.query.count()
+    total_students = User.query.filter_by(role='student').count()
+    total_advisors = User.query.filter_by(role='advisor').count()
+    total_admins = User.query.filter_by(role='admin').count()
+    total_messages = ChatMessage.query.count()
     
-    if not user:
-        flash('User not found', 'danger')
-        return redirect(url_for('profile'))
+    # Get recent activities
+    recent_users = User.query.order_by(User.created_at.desc()).limit(5).all()
+    recent_messages = ChatMessage.query.order_by(ChatMessage.timestamp.desc()).limit(5).all()
     
-    try:
-        # Delete all chat messages where user is sender or receiver
-        ChatMessage.query.filter(
-            (ChatMessage.sender_id == user_id) | 
-            (ChatMessage.receiver_id == user_id)
-        ).delete()
-        
-        # Delete the user account
-        db.session.delete(user)
-        db.session.commit()
-        
-        # Clear session
-        session.clear()
-        
-        flash('Your account has been successfully deleted', 'success')
-        return redirect(url_for('login'))
-        
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error deleting account: {str(e)}', 'danger')
-        return redirect(url_for('profile'))
+    return render_template('admin_dashboard.html',
+                         total_users=total_users,
+                         total_students=total_students,
+                         total_advisors=total_advisors,
+                         total_admins=total_admins,
+                         total_messages=total_messages,
+                         recent_users=recent_users,
+                         recent_messages=recent_messages)
 
 
-# We also need to update the register.html template to include the role field
-# This is handled in the new register.html file
+# Admin User Management - View All Users
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    """View all users in table format"""
+    page = request.args.get('page', 1, type=int)
+    role_filter = request.args.get('role', 'all')
+    search_query = request.args.get('search', '')
+    per_page = 15
+    
+    # Build query
+    query = User.query
+    
+    if role_filter != 'all':
+        query = query.filter_by(role=role_filter)
+    
+    if search_query:
+        query = query.filter(
+            (User.username.contains(search_query)) |
+            (User.email.contains(search_query)) |
+            (User.full_name.contains(search_query))
+        )
+    
+    users = query.order_by(User.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template('admin_users.html', 
+                         users=users, 
+                         role_filter=role_filter, 
+                         search_query=search_query)
+
+
+# Admin Student Management
+@app.route('/admin/students')
+@admin_required
+def admin_students():
+    """View all students in detailed table format"""
+    page = request.args.get('page', 1, type=int)
+    search_query = request.args.get('search', '')
+    per_page = 20
+    
+    # Build query for students only
+    query = User.query.filter_by(role='student')
+    
+    if search_query:
+        query = query.filter(
+            (User.username.contains(search_query)) |
+            (User.email.contains(search_query)) |
+            (User.full_name.contains(search_query)) |
+            (User.student_id.contains(search_query)) |
+            (User.department.contains(search_query))
+        )
+    
+    students = query.order_by(User.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template('admin_students.html', students=students, search_query=search_query)
+
+
+# Admin Advisor Management
+@app.route('/admin/advisors')
+@admin_required
+def admin_advisors():
+    """View all advisors in detailed table format"""
+    page = request.args.get('page', 1, type=int)
+    search_query = request.args.get('search', '')
+    per_page = 20
+    
+    # Build query for advisors only
+    query = User.query.filter_by(role='advisor')
+    
+    if search_query:
+        query = query.filter(
+            (User.username.contains(search_query)) |
+            (User.email.contains(search_query)) |
+            (User.full_name.contains(search_query)) |
+            (User.specialization.contains(search_query)) |
+            (User.title.contains(search_query))
+        )
+    
+    advisors = query.order_by(User.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template('admin_advisors.html', advisors=advisors, search_query=search_query)
+
+
+# Admin Message Logs
+@app.route('/admin/messages')
+@admin_required
+def admin_messages():
+    """View all messages between users"""
+    page = request.args.get('page', 1, type=int)
+    per_page = 30
+    
+    messages = ChatMessage.query.order_by(ChatMessage.timestamp.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    
+    return render_template('admin_messages.html', messages=messages)
+
+
+# Admin Delete User
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_delete_user(user_id):
+    """Delete a specific user (admin function)"""
+    # Prevent admin from deleting themselves
+    if session.get('user_id') == user_id:
+        flash('You cannot delete your own account', 'danger')
+        return redirect(request.referrer)
+    
+    user = User.query.get_or_404(user_id)
+    
+    # Delete user's messages first (to maintain referential integrity)
+    ChatMessage.query.filter(
+        (ChatMessage.sender_id == user_id) | (ChatMessage.receiver_id == user_id)
+    ).delete()
+    
+    # Store info for flash message
+    username = user.username
+    role = user.role
+    
+    # Delete the user
+    db.session.delete(user)
+    db.session.commit()
+    
+    flash(f'{role.title()} "{username}" has been deleted successfully', 'success')
+    return redirect(request.referrer)
+
+
+# Admin Export Data
+@app.route('/admin/export/<data_type>')
+@admin_required
+def admin_export_data(data_type):
+    """Export data to CSV for presentations"""
+    import csv
+    import io
+    from flask import Response
+    
+    output = io.StringIO()
+    
+    if data_type == 'students':
+        writer = csv.writer(output)
+        writer.writerow(['ID', 'Username', 'Email', 'Full Name', 'Student ID', 'Department', 'Year', 'Phone', 'Created At'])
+        
+        students = User.query.filter_by(role='student').all()
+        for student in students:
+            writer.writerow([
+                student.id, student.username, student.email, student.full_name or '',
+                student.student_id or '', student.department or '', student.year_of_study or '',
+                student.phone or '', student.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+        
+        filename = 'students_export.csv'
+        
+    elif data_type == 'advisors':
+        writer = csv.writer(output)
+        writer.writerow(['ID', 'Username', 'Email', 'Full Name', 'Title', 'Specialization', 'Office', 'Office Hours', 'Created At'])
+        
+        advisors = User.query.filter_by(role='advisor').all()
+        for advisor in advisors:
+            writer.writerow([
+                advisor.id, advisor.username, advisor.email, advisor.full_name or '',
+                advisor.title or '', advisor.specialization or '', advisor.office_location or '',
+                advisor.office_hours or '', advisor.created_at.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+        
+        filename = 'advisors_export.csv'
+        
+    elif data_type == 'messages':
+        writer = csv.writer(output)
+        writer.writerow(['ID', 'Sender', 'Receiver', 'Content', 'Timestamp', 'Read'])
+        
+        messages = ChatMessage.query.all()
+        for message in messages:
+            writer.writerow([
+                message.id, message.sender.username, message.receiver.username,
+                message.content[:200] + '...' if len(message.content) > 200 else message.content,
+                message.timestamp.strftime('%Y-%m-%d %H:%M:%S'), message.read
+            ])
+        
+        filename = 'messages_export.csv'
+    
+    else:
+        return "Invalid data type", 400
+    
+    output.seek(0)
+    return Response(
+        output.getvalue(),
+        mimetype='text/csv',
+        headers={'Content-Disposition': f'attachment; filename={filename}'}
+    )
+
 
 if __name__ == '__main__':
     # Don't create tables here as we've migrated the database separately
