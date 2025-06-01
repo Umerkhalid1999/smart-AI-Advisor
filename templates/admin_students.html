@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+
+{% block title %}Student Management - Database Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-header {
+        background: linear-gradient(135deg, #fd79a8 0%, #e84393 100%);
+        color: white;
+        padding: 30px 0;
+        margin: -20px -15px 30px -15px;
+        border-radius: 0 0 20px 20px;
+    }
+    
+    .data-table {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .table thead th {
+        background: #f8f9fc;
+        color: #2d3436;
+        font-weight: 600;
+        border: none;
+        padding: 15px 12px;
+        font-size: 0.9rem;
+    }
+    
+    .table tbody td {
+        padding: 12px;
+        border: none;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+    }
+    
+    .table tbody tr:hover {
+        background: #f8f9fc;
+    }
+    
+    .role-badge {
+        background: #fd79a8;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: 500;
+    }
+    
+    .btn-action {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        margin: 2px;
+    }
+    
+    .search-box {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+    }
+    
+    .stats-bar {
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 20px;
+        box-shadow: 0 3px 15px rgba(0,0,0,0.08);
+    }
+    
+    .icon-large {
+        font-size: 2rem;
+        margin-right: 15px;
+        opacity: 0.8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-header text-center">
+    <div class="container">
+        <h1><i class="fas fa-user-graduate icon-large"></i>Student Management</h1>
+        <p class="lead">View and manage all registered students</p>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Statistics Bar -->
+    <div class="stats-bar">
+        <div class="row align-items-center">
+            <div class="col-md-4">
+                <h5 class="mb-0">
+                    <i class="fas fa-users text-primary"></i> 
+                    Total Students: <strong>{{ students.total }}</strong>
+                </h5>
+            </div>
+            <div class="col-md-4 text-center">
+                <a href="{{ url_for('admin_export_data', data_type='students') }}" class="btn btn-success">
+                    <i class="fas fa-file-csv"></i> Export Students Data
+                </a>
+            </div>
+            <div class="col-md-4 text-right">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Box -->
+    <div class="search-box">
+        <form method="GET" class="row align-items-center">
+            <div class="col-md-8">
+                <input type="text" class="form-control" name="search" 
+                       placeholder="Search students by username, email, name, student ID, or department..."
+                       value="{{ search_query }}">
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary mr-2">
+                    <i class="fas fa-search"></i> Search
+                </button>
+                {% if search_query %}
+                <a href="{{ url_for('admin_students') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times"></i> Clear
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Students Table -->
+    <div class="data-table">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Student ID</th>
+                    <th>Department</th>
+                    <th>Year</th>
+                    <th>Registered</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for student in students.items %}
+                <tr>
+                    <td><strong>{{ student.id }}</strong></td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <img src="{{ url_for('uploaded_file', filename=student.profile_image) if student.profile_image != 'default-avatar.png' else url_for('static', filename='images/default-avatar.png') }}" 
+                                 alt="Profile" class="rounded-circle mr-2" style="width: 30px; height: 30px;">
+                            <strong>{{ student.username }}</strong>
+                        </div>
+                    </td>
+                    <td>{{ student.full_name or '-' }}</td>
+                    <td>{{ student.email }}</td>
+                    <td>{{ student.student_id or '-' }}</td>
+                    <td>{{ student.department or '-' }}</td>
+                    <td>{{ student.year_of_study or '-' }}</td>
+                    <td>
+                        <small class="text-muted">{{ student.created_at.strftime('%Y-%m-%d') }}</small>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('view_profile', user_id=student.id) }}" 
+                           class="btn btn-sm btn-outline-info btn-action">
+                            <i class="fas fa-eye"></i> View
+                        </a>
+                        <form method="POST" action="{{ url_for('admin_delete_user', user_id=student.id) }}" 
+                              style="display: inline;" 
+                              onsubmit="return confirm('Are you sure you want to delete student {{ student.username }}? This action cannot be undone.')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger btn-action">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if not students.items %}
+                <tr>
+                    <td colspan="9" class="text-center py-4">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No students found</h5>
+                        {% if search_query %}
+                        <p class="text-muted">Try adjusting your search criteria</p>
+                        {% else %}
+                        <p class="text-muted">No students have registered yet</p>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if students.pages > 1 %}
+    <nav aria-label="Students pagination" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if students.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_students', page=students.prev_num, search=search_query) }}">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for page_num in students.iter_pages() %}
+                {% if page_num %}
+                    {% if page_num != students.page %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admin_students', page=page_num, search=search_query) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                    {% endif %}
+                {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if students.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin_students', page=students.next_num, search=search_query) }}">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %} 
